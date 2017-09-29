@@ -1,0 +1,265 @@
+module shiftregister(data1,data2,clk,register_out,counter_out,clk2,topla);
+input [7:0]data1,data2;
+input clk,clk2;
+output [3:0]counter_out;
+wire control_initial;
+wire [15:0]shift_out;
+output [15:0]register_out;
+wire [15:0]register_input;
+output topla;
+wire shift_stop,one_cycle_hold;
+//wire PWM1,PWM2;
+//wire PWM;
+//PWM_deneme(clk,PWM1);
+//PWM_deneme(PWM1,PWM);
+counter(counter_out,clk,control_initial,shift_stop,one_cycle_hold);
+mux8(data2 , counter_out[0], counter_out[1] ,counter_out[2],counter_out[3],topla);//module mux8 (in , s0, s1 ,s2,out);
+_16bitshift(clk&!one_cycle_hold ,shift_out,control_initial,data1,0,shift_stop);//_8bitshift(clk,data_out,control_initial,information,first_bit);
+productregister(register_out,register_input,clk&~shift_stop); //productregister(dataout,datastore,clk);
+_16bitadder(register_out,shift_out,,register_input,,topla);
+
+endmodule
+//********************************PWM**********************************************************
+
+module PWM_deneme(clockin,PWM);
+input clockin;
+output PWM;
+
+wire [0:14]q;
+_dff(q[0],~q[0],clockin);
+_dff(q[1],~q[1],q[0]);
+_dff(q[2],~q[2],q[1]);
+_dff(q[3],~q[3],q[2]);
+_dff(q[4],~q[4],q[3]);
+_dff(q[5],~q[5],q[4]);
+_dff(q[6],~q[6],q[5]);
+_dff(q[7],~q[7],q[6]);
+_dff(q[8],~q[8],q[7]);
+_dff(q[9],~q[9],q[8]);
+_dff(q[10],~q[10],q[9]);
+_dff(q[11],~q[11],q[10]);
+_dff(q[12],~q[12],q[11]);
+_dff(q[13],~q[13],q[12]);
+
+assign PWM=q[12];
+
+endmodule
+module  _dff(q,d,clk);
+
+	output reg q;
+	input   d,clk;
+	
+	always @ (posedge clk)
+	begin
+		q<=d;
+	end
+endmodule
+
+//*****************************************************************************************
+//********************************ADDER********************************************************
+module _16bitadder(in1,in2,carryin,out,carryout,topla);
+input [15:0]in1,in2;
+input carryin,topla;
+output [15:0]out;
+output carryout;
+wire [15:0]topla_out;
+wire out1,out2,out3,carryout1;
+assign topla_out[0]=topla&in2[0];
+assign topla_out[1]=topla&in2[1];
+assign topla_out[2]=topla&in2[2];
+assign topla_out[3]=topla&in2[3];
+assign topla_out[4]=topla&in2[4];
+assign topla_out[5]=topla&in2[5];
+assign topla_out[6]=topla&in2[6];
+assign topla_out[7]=topla&in2[7];
+assign topla_out[8]=topla&in2[8];
+assign topla_out[9]=topla&in2[9];
+assign topla_out[10]=topla&in2[10];
+assign topla_out[11]=topla&in2[11];
+assign topla_out[12]=topla&in2[12];
+assign topla_out[13]=topla&in2[13];
+assign topla_out[14]=topla&in2[14];
+assign topla_out[15]=topla&in2[15];
+
+_8bitadder(in1[7:0],topla_out[7:0],carryin,out[7:0],carryout1);
+_8bitadder(in1[15:8],topla_out[15:8],carryout1,out[15:8],carryout);
+endmodule
+
+module _8bitadder(in1,in2,carryin,out,carryout);
+input [7:0]in1,in2;
+input carryin;
+output [7:0]out;
+output carryout;
+wire out1,out2,out3,carryout1;
+_4bitadder(in1[3:0],in2[3:0],carryin,out[3:0],carryout1);
+_4bitadder(in1[7:4],in2[7:4],carryout1,out[7:4],carryout);
+endmodule
+
+module _4bitadder(in1,in2,carryin,out,carryout);
+input [3:0]in1,in2;
+input carryin;
+output [3:0]out;
+output carryout;
+wire out1,out2,out3,carryout1;
+_2bitadder(in1[1:0],in2[1:0],carryin,out[1:0],carryout1);
+_2bitadder(in1[3:2],in2[3:2],carryout1,out[3:2],carryout);
+endmodule
+
+module _2bitadder(in1,in2,carryin,out,carryout);
+input [1:0]in1,in2;
+input carryin;
+output [1:0]out;
+output carryout;
+wire out1,out2,out3,carryout1;
+fulladder(in1[0],in2[0],carryin,out[0],carryout1);
+fulladder(in1[1],in2[1],carryout1,out[1],carryout);
+endmodule
+
+module fulladder(in1,in2,carryin,out,carryout);
+input in1,in2,carryin;
+output out,carryout;
+wire wire1,wire2,wire3;
+assign wire1=in1^in2;
+assign wire2=in1&in2;
+assign wire3=wire1&carryin;
+assign carryout=wire3|wire2;
+assign out=wire1^carryin;
+
+endmodule
+//**************************   ADDER  END  *******************************************************
+module productregister(dataout,datastore,clk);
+
+	output reg [15:0]dataout;
+	input [15:0]datastore;
+	input clk;
+		
+	always @(posedge clk)
+	begin
+		dataout<=datastore;
+	end
+endmodule 
+
+module counter(topla,clk,control_initial,shift_stop,one_cycle_hold);
+
+		input clk;
+		output control_initial;
+		output reg[3:0] topla;
+      output shift_stop,one_cycle_hold;
+		
+		reg stop;
+			assign control_initial=(~topla[0]&~topla[1]&~topla[2]&~topla[3]);
+			assign one_cycle_hold=(~topla[0]&topla[1]&~topla[2]&~topla[3]);
+		assign shift_stop=stop;
+		always@(posedge clk )
+		begin
+				if(!(topla[0]==0&topla[1]==0&topla[2]==0&topla[3]==1))
+		begin 
+		topla<=topla+1;
+		stop<=0;
+		end
+		else begin
+		stop<=1; 
+		end
+		end
+	
+
+endmodule
+
+module mux8 (in , s0, s1 ,s2 ,s3,out);
+input [7:0]in;
+input s0,s1, s2,s3;
+output out;
+wire [7:0]w1;
+
+
+assign w1[0]= (s0)&(~s1)&(~s2)&(~s3)&in[0];
+assign w1[1]= (~s0)&(s1)&(~s2)&(~s3)&in[1];
+assign w1[2]= (s0)&(s1)&(~s2)&(~s3)&in[2];
+assign w1[3]= (~s0)&(~s1)&(s2)&(~s3)&in[3];
+assign w1[4]= (s0)&(~s1)&(s2)&(~s3)&in[4];
+assign w1[5]= (~s0)&(s1)&(s2)&(~s3)&in[5];
+assign w1[6]= (s0)&(s1)&(s2)&(~s3)&in[6];
+assign w1[7]= (~s0)&(~s1)&(~s2)&(s3)&in[7];
+
+assign out=w1[0]| w1[1]| w1[2]| w1[3]| w1[4]| w1[5]| w1[6]| w1[7];
+
+endmodule 
+
+
+module _16bitshift(clk,data_out,control_initial,information,first_bit,shift_stop);
+input clk,control_initial,first_bit;
+input [7:0]information;
+output [15:0]data_out;
+input shift_stop;
+
+_8bitshift(clk,data_out[7:0],control_initial,information[7:0],first_bit,shift_stop);
+_8bitshift(clk,data_out[15:8],control_initial,,data_out[7],shift_stop);
+endmodule
+
+module _8bitshift(clk,data_out,control_initial,information,first_bit,shift_stop);
+input clk,control_initial,first_bit,shift_stop;
+input [7:0]information;
+output [7:0]data_out;
+
+wire [7:0]d_in;
+wire [7:0]d_in2;
+wire clk_shift;
+
+assign clk_shift=clk&~shift_stop;
+assign d_in2[0]=control_initial&information[0];
+assign d_in2[1]=control_initial&information[1];
+assign d_in2[2]=control_initial&information[2];
+assign d_in2[3]=control_initial&information[3];
+assign d_in2[4]=control_initial&information[4];
+assign d_in2[5]=control_initial&information[5];
+assign d_in2[6]=control_initial&information[6];
+assign d_in2[7]=control_initial&information[7];
+
+assign d_in[0]=first_bit|d_in2[0];
+assign d_in[1]=data_out[0]|d_in2[1];
+assign d_in[2]=data_out[1]|d_in2[2];
+assign d_in[3]=data_out[2]|d_in2[3];
+assign d_in[4]=data_out[3]|d_in2[4];
+assign d_in[5]=data_out[4]|d_in2[5];
+assign d_in[6]=data_out[5]|d_in2[6];
+assign d_in[7]=data_out[6]|d_in2[7];
+
+
+flip dff0(d_in[0],data_out[0],clk_shift);
+flip dff1(d_in[1],data_out[1],clk_shift);
+flip dff2(d_in[2],data_out[2],clk_shift);
+flip dff3(d_in[3],data_out[3],clk_shift);
+flip dff4(d_in[4],data_out[4],clk_shift);
+flip dff5(d_in[5],data_out[5],clk_shift);
+flip dff6(d_in[6],data_out[6],clk_shift);
+flip dff7(d_in[7],data_out[7],clk_shift);
+endmodule
+/*
+module flip(d,q,clk);
+input d,clk;
+output q;
+ wire w1,w2,w3,w4;
+ 
+assign w1=!(clk&d);
+assign w2=!(clk&!d);
+
+assign q= ~(w4&w1);
+assign w4= ~(q&w2);
+
+endmodule
+
+*/
+
+module flip(D,out,clk);
+input clk;
+output out;
+reg Q;
+input D;
+always@(posedge clk)
+begin
+Q<=D;
+end 
+assign out =Q;
+endmodule
+
+
